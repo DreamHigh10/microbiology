@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microbiology Virtual Lab</title>
+    
+    <!-- Befitting Microscope Favicon (Inline SVG) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔬</text></svg>">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // Enable class-based dark mode
+        }
+    </script>
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Custom Animations */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-2px) rotate(-1deg); }
+            75% { transform: translateX(2px) rotate(1deg); }
+        }
+        @keyframes bounce-drop {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        @keyframes spin-smear {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes pulse-flame {
+            0%, 100% { opacity: 0.8; height: 32px; }
+            50% { opacity: 1; height: 36px; }
+        }
+        .animate-shake { animation: shake 1.5s ease-in-out infinite; }
+        .animate-bounce-drop { animation: bounce-drop 1s ease-in-out infinite; }
+        .animate-spin-smear { animation: spin-smear 1s linear infinite; }
+        .animate-pulse-flame { animation: pulse-flame 0.2s ease-in-out infinite; }
+        
+        /* Transitions */
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Slide positions */
+        .slide-pos-bench { left: 10%; bottom: 15%; }
+        .slide-pos-flame { left: 45%; bottom: 25%; }
+        .slide-pos-rack { left: 72%; bottom: 38%; }
+        .pipette-pos-cup { left: 48%; }
+        .pipette-pos-cart { left: 38%; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans selection:bg-teal-200 selection:text-teal-900 min-h-screen flex flex-col transition-colors duration-300">
+
+    <!-- Navigation -->
+    <nav class="bg-slate-900 dark:bg-black text-white shadow-lg sticky top-0 z-50 transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center cursor-pointer" onclick="navigate('home')">
+                    <i class="fa-solid fa-microscope text-2xl text-teal-400 mr-2"></i>
+                    <span class="font-bold text-xl tracking-tight">MicroBio<span class="text-teal-400">Labs</span></span>
+                </div>
+                <div class="flex items-center space-x-2 md:space-x-4" id="nav-links">
+                    <button onclick="navigate('home')" class="nav-btn px-2 py-2 rounded-md text-sm font-medium transition-colors bg-slate-800 dark:bg-slate-800 text-white" data-target="home">Home</button>
+                    <button onclick="navigate('gram')" class="nav-btn px-2 py-2 rounded-md text-sm font-medium transition-colors text-slate-300 hover:bg-slate-700 hover:text-white" data-target="gram">Gram Stain</button>
+                    <button onclick="navigate('zn')" class="nav-btn px-2 py-2 rounded-md text-sm font-medium transition-colors text-slate-300 hover:bg-slate-700 hover:text-white" data-target="zn">Ziehl-Neelsen</button>
+                    <button onclick="navigate('xpert')" class="nav-btn px-2 py-2 rounded-md text-sm font-medium transition-colors text-slate-300 hover:bg-slate-700 hover:text-white" data-target="xpert">GeneXpert</button>
+                    
+                    <!-- Dark Mode Toggle -->
+                    <div class="border-l border-slate-700 pl-4 ml-2">
+                        <button onclick="toggleDarkMode()" class="text-slate-300 hover:text-teal-400 px-2 py-2 rounded-md transition-colors" title="Toggle Dark Mode">
+                            <i id="theme-icon" class="fa-solid fa-moon text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="app-content" class="flex-grow"></main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 dark:bg-black text-slate-400 py-8 text-center text-sm mt-12 transition-colors duration-300">
+        <p>&copy; 2026 Ogungbade Kehinde John(DreamHigh). Designed for practical learning.</p>
+    </footer>
+
+<script>
+// ==========================================
+// DARK MODE LOGIC
+// ==========================================
+function toggleDarkMode() {
+    SoundEngine.playClick();
+    document.documentElement.classList.toggle('dark');
+    const isDark = document.documentElement.classList.contains('dark');
+    const icon = document.getElementById('theme-icon');
+    
+    if (isDark) {
+        icon.classList.replace('fa-moon', 'fa-sun');
+    } else {
+        icon.classList.replace('fa-sun', 'fa-moon');
+    }
+}
+
+// ==========================================
+// TEXT-TO-SPEECH (AUDIO NARRATION) ENGINE
+// ==========================================
+function speakText(text) {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); // Stop any currently playing audio
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.95; // Slightly slower for readability
+        utterance.pitch = 1;
+        window.speechSynthesis.speak(utterance);
+    } else {
+        alert("Text-to-speech is not supported in your browser.");
+    }
+}
+
+function speakCurrentInstruction() {
+    if (!simState.data || !simState.data.processSteps[simState.stepIndex]) return;
+    const text = simState.data.processSteps[simState.stepIndex].instruction;
+    speakText(text);
+}
+
+function stopAudio() {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+}
+
+
+// ==========================================
+// SOUND ENGINE (Web Audio API Synthesizer)
+// ==========================================
+const SoundEngine = (function() {
+    let ctx = null;
+
+    function init() {
+        if (!ctx) {
+            ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (ctx.state === 'suspended') ctx.resume();
+    }
+
+    function createNoiseBuffer() {
+        const bufferSize = ctx.sampleRate * 2;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const output = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+        return buffer;
+    }
+
+    return {
+        playClick: () => {
+            init();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine'; osc.frequency.setValueAtTime(600, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.01, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(ctx.currentTime + 0.1);
+        },
+        playSmear: () => {
+            init();
+            const noise = ctx.createBufferSource();
+            noise.buffer = createNoiseBuffer();
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'highpass'; filter.frequency.value = 1000;
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.01, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+            noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+            noise.start(); noise.stop(ctx.currentTime + 1.5);
+        },
+        playFire: () => {
+            init();
+            const noise = ctx.createBufferSource();
+            noise.buffer = createNoiseBuffer();
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass'; filter.frequency.value = 400;
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.03, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 3.0);
+            noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+            noise.start(); noise.stop(ctx.currentTime + 3.0);
+        },
+        playDrop: () => {
+            init();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.02, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(ctx.currentTime + 0.2);
+        },
+        playWash: () => {
+            init();
+            const noise = ctx.createBufferSource();
+            noise.buffer = createNoiseBuffer();
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass'; filter.frequency.value = 800;
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.02, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+            noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+            noise.start(); noise.stop(ctx.currentTime + 1.5);
+        },
+        playBeep: () => {
+            init();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'square'; osc.frequency.setValueAtTime(1000, ctx.currentTime);
+            gain.gain.setValueAtTime(0.005, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(ctx.currentTime + 0.1);
+        },
+        playSuccess: () => {
+            init();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+            osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.15); // E5
+            osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.3); // G5
+            gain.gain.setValueAtTime(0.03, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(ctx.currentTime + 1);
+        },
+        playFail: () => {
+            init();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, ctx.currentTime);
+            osc.frequency.linearRampToValueAtTime(100, ctx.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.03, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(ctx.currentTime + 0.5);
+        },
+        playMachineHum: () => {
+            init();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(100, ctx.currentTime);
+            gain.gain.setValueAtTime(0.01, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 3.0);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(); osc.stop(ctx.currentTime + 3.0);
+        }
+    };
+})();
+
+// ==========================================
+// DATA DEFINITIONS
+// ==========================================
+const LAB_DATA = {
+    gram: {
+        id: 'gram',
+        title: 'Gram Staining',
+        subtitle: 'Differential stain based on cell wall composition',
+        theory: {
+            principle: "The Gram stain is a differential staining technique used to classify bacteria into two large groups: Gram-positive and Gram-negative. The differentiation is based on the biochemical and structural differences in their cell walls. Gram-positive bacteria have a thick layer of peptidoglycan that traps the primary stain-mordant complex (Crystal Violet - Lugol's Iodine). Gram-negative bacteria have a thinner peptidoglycan layer and an outer lipid membrane that is dissolved by the decolorizer (Acetone), allowing the primary stain to wash out. They are then visualized using a counterstain (Safranin).",
+            materials: ["Glass slides", "Inoculating loop", "Bunsen burner", "Microscope with oil immersion lens", "Bacterial cultures (e.g., S. aureus and E. coli)", "Staining rack and sink", "Wash bottle with distilled water"],
+            reagents: [
+                { name: "Primary Stain: Crystal Violet", prep: "Dissolve 2g of crystal violet in 20ml of 95% ethanol. Mix with 0.8g of ammonium oxalate dissolved in 80ml of distilled water." },
+                { name: "Mordant: Lugol's Iodine", prep: "Dissolve 1g of iodine and 2g of potassium iodide in 300ml of distilled water." },
+                { name: "Decolorizer: Acetone", prep: "Use 100% Acetone. This is a very rapid decolorizer." },
+                { name: "Counterstain: Safranin", prep: "Dissolve 2.5g of safranin O in 100ml of 95% ethanol. Add 10ml of this stock solution to 90ml of distilled water." }
+            ]
+        },
+        results: [
+            { category: "Gram-Positive", appearance: "Dark Purple / Blue", interpretation: "Cells have a thick peptidoglycan layer that retains the Crystal Violet-Iodine complex.", organisms: ["Staphylococcus aureus", "Streptococcus pyogenes", "Bacillus anthracis", "Clostridium tetani"] },
+            { category: "Gram-Negative", appearance: "Pink / Red", interpretation: "Cells have a thin peptidoglycan layer and an outer lipid membrane; they lose the primary stain and take up the Safranin counterstain.", organisms: ["Escherichia coli", "Pseudomonas aeruginosa", "Salmonella typhi", "Neisseria gonorrhoeae"] }
+        ],
+        processSteps: [
+            { id: 'smear', type: 'action', name: 'Smear Preparation', instruction: 'Use the inoculating loop to spread the bacterial culture evenly onto the center of the slide.', btn: 'Smear Slide', targetPos: 'bench' },
+            { id: 'heatfix', type: 'action', name: 'Heat Fixation', instruction: 'Pass the slide back and forth through the Bunsen burner flame 3 times to kill the bacteria and affix them to the glass.', btn: 'Heat Fix', targetPos: 'flame' },
+            { id: 'rack', type: 'action', name: 'Transfer to Rack', instruction: 'Move the slide to the staining rack over the sink to begin the staining procedure.', btn: 'Place on Rack', targetPos: 'rack' },
+            { id: 'cv', type: 'stain', name: 'Crystal Violet (Primary)', instruction: 'Apply Crystal Violet. Wash exactly between 5 to 8 seconds.', color: '#6b21a8', minTime: 5, maxTime: 8 },
+            { id: 'iodine', type: 'stain', name: "Lugol's Iodine (Mordant)", instruction: "Apply Lugol's Iodine to form the complex. Wash exactly between 5 to 8 seconds.", color: '#4c1d95', minTime: 5, maxTime: 8 },
+            { id: 'acetone', type: 'stain', name: 'Acetone (Decolorizer)', instruction: 'CRITICAL STEP: Apply Acetone. Wash immediately between 1.5 and 2.5 seconds! Too long will over-decolorize.', color: 'rgba(255,255,255,0.4)', minTime: 1.5, maxTime: 2.5, postColor: 'rgba(107, 33, 168, 0.4)' },
+            { id: 'safranin', type: 'stain', name: 'Safranin (Counterstain)', instruction: 'Apply Safranin. Wash exactly between 5 to 8 seconds.', color: '#db2777', minTime: 5, maxTime: 8 },
+            { id: 'microscope', type: 'view', name: 'Microscopic Evaluation', instruction: 'Examine the slide under the microscope (1000x oil immersion).', btn: 'View Microscope' }
+        ],
+        quiz: [
+            { q: "What is the primary purpose of Lugol's Iodine in the Gram stain procedure?", options: ["To decolorize the cells", "To act as a counterstain", "To form a complex with crystal violet", "To dissolve the outer lipid membrane"], answer: 2 },
+            { q: "If you leave the Acetone decolorizer on for too long, what will be the likely result?", options: ["All cells will appear purple", "Gram-positive cells will appear pink", "All cells will be colorless", "Gram-negative cells will appear purple"], answer: 1 },
+            { q: "Which structure is primarily responsible for the different staining reactions in Gram-positive and Gram-negative bacteria?", options: ["Plasma membrane", "Peptidoglycan layer", "Ribosomes", "Capsule"], answer: 1 }
+        ]
+    },
+    zn: {
+        id: 'zn',
+        title: 'Ziehl-Neelsen (Acid-Fast) Stain',
+        subtitle: 'Differential stain for Mycobacteria',
+        theory: {
+            principle: "The Ziehl-Neelsen stain identifies acid-fast organisms, primarily Mycobacterium. These bacteria have a waxy cell wall rich in mycolic acid, making them highly resistant to conventional staining. Heat is used as a physical mordant to drive the primary stain (Carbol Fuchsin) into the waxy cell wall. Once stained, they resist decolorization by acid-alcohol ('acid-fast'). Non-acid-fast bacteria are decolorized and take up the counterstain (Methylene Blue).",
+            materials: ["Glass slides", "Bunsen burner", "Microscope with oil immersion lens", "Sputum sample", "Staining rack", "Wash bottle"],
+            reagents: [
+                { name: "Primary Stain: Carbol Fuchsin", prep: "Dissolve 50ml of 10% basic fuchsin in 95% ethanol. Add 100ml of 5% aqueous phenol solution." },
+                { name: "Decolorizer: Acid-Alcohol", prep: "Carefully add 3ml of concentrated Hydrochloric acid (HCl) to 97ml of 95% ethanol." },
+                { name: "Counterstain: Methylene Blue", prep: "Dissolve 0.3g of methylene blue chloride in 100ml of distilled water." }
+            ]
+        },
+        results: [
+            { category: "Acid-Fast Bacilli (AFB)", appearance: "Hot Pink / Red", interpretation: "Cells contain high amounts of mycolic acid in their walls, resisting decolorization by acid-alcohol.", organisms: ["Mycobacterium tuberculosis", "Mycobacterium leprae", "Mycobacterium avium complex", "Nocardia species (weakly acid-fast)"] },
+            { category: "Non-Acid-Fast Organisms", appearance: "Blue", interpretation: "Cells lack mycolic acid, are decolorized by acid-alcohol, and absorb the Methylene Blue counterstain.", organisms: ["Staphylococcus species", "Escherichia coli", "Most other routine bacteria", "Epithelial cells"] }
+        ],
+        processSteps: [
+            { id: 'smear', type: 'action', name: 'Smear Preparation', instruction: 'Carefully smear the sputum sample onto the slide.', btn: 'Smear Slide', targetPos: 'bench' },
+            { id: 'heatfix', type: 'action', name: 'Heat Fixation', instruction: 'Pass the slide through the flame to fix the sample.', btn: 'Heat Fix', targetPos: 'flame' },
+            { id: 'rack', type: 'action', name: 'Place on Rack', instruction: 'Move the slide to the staining rack.', btn: 'Place on Rack', targetPos: 'rack' },
+            { id: 'carbol', type: 'stain', name: 'Carbol Fuchsin + Heat', instruction: 'Apply Carbol Fuchsin. The slide will be heated. Wash exactly between 6 to 9 seconds.', color: '#e11d48', minTime: 6, maxTime: 9, heat: true },
+            { id: 'acid', type: 'stain', name: 'Acid-Alcohol (Decolorizer)', instruction: 'Apply Acid-Alcohol. Wash exactly between 2.5 and 4.5 seconds.', color: 'rgba(255,255,255,0.4)', minTime: 2.5, maxTime: 4.5, postColor: 'rgba(225, 29, 72, 0.4)' },
+            { id: 'methylene', type: 'stain', name: 'Methylene Blue', instruction: 'Apply Methylene Blue. Wash exactly between 5 to 8 seconds.', color: '#2563eb', minTime: 5, maxTime: 8 },
+            { id: 'microscope', type: 'view', name: 'Microscopic Evaluation', instruction: 'Examine under the microscope.', btn: 'View Microscope' }
+        ],
+        quiz: [
+            { q: "What characteristic of the mycobacterial cell wall makes it acid-fast?", options: ["Thick peptidoglycan layer", "Presence of lipopolysaccharide", "High concentration of mycolic acid", "Presence of a thick capsule"], answer: 2 },
+            { q: "Why is heat applied during the primary staining step of the Ziehl-Neelsen method?", options: ["To fix the bacteria to the slide", "To melt the mycolic acid and allow stain penetration", "To decolorize the non-acid-fast bacteria", "To evaporate excess water"], answer: 1 },
+            { q: "In a positive Ziehl-Neelsen stain, what color do Acid-Fast Bacilli (AFB) appear?", options: ["Blue", "Purple", "Pink/Red", "Green"], answer: 2 }
+        ]
+    },
+    xpert: {
+        id: 'xpert',
+        title: 'GeneXpert MTB/RIF Assay',
+        subtitle: 'Automated molecular test for TB and Rifampicin resistance',
+        theory: {
+            principle: "The GeneXpert MTB/RIF assay is a cartridge-based nucleic acid amplification test (NAAT) for simultaneous rapid tuberculosis diagnosis and rapid antibiotic sensitivity test. It detects the DNA of Mycobacterium tuberculosis complex and mutations associated with rifampicin resistance (rpoB gene) directly from patient sputum.",
+            materials: ["Sputum sample in a sterile container", "GeneXpert MTB/RIF Cartridge", "Sample Reagent (SR)", "Sterile disposable transfer pipette", "GeneXpert Instrument System"],
+            reagents: [
+                { name: "Sample Reagent (SR)", prep: "Provided in the assay kit. Contains NaOH and isopropanol to liquefy the sputum and reduce the viability of M. tuberculosis." }
+            ]
+        },
+        results: [
+            { category: "MTB Detected, RIF Resistance NOT Detected", appearance: "Positive for TB, Susceptible to Rifampicin", interpretation: "M. tuberculosis DNA is present. rpoB mutations NOT found. Standard first-line therapy is effective.", organisms: ["Mycobacterium tuberculosis complex"] },
+            { category: "MTB Detected, RIF Resistance DETECTED", appearance: "Positive for TB, Resistant to Rifampicin", interpretation: "M. tuberculosis DNA is present, AND mutations in the rpoB gene detected. Indicates Multidrug-Resistant TB (MDR-TB).", organisms: ["Rifampicin-Resistant Mycobacterium tuberculosis"] },
+            { category: "MTB NOT Detected", appearance: "Negative for TB", interpretation: "No M. tuberculosis DNA found. Further clinical evaluation required if symptoms persist.", organisms: ["None"] }
+        ],
+        processSteps: [
+            { id: 'reagent', type: 'action', name: 'Add Sample Reagent', instruction: 'Pour Sample Reagent into the sputum cup at a 2:1 ratio.', btn: 'Add Reagent' },
+            { id: 'incubate', type: 'action', name: 'Incubate & Shake', instruction: 'Incubate for 15 minutes at room temperature. Shake vigorously.', btn: 'Incubate (15m)' },
+            { id: 'transfer', type: 'action', name: 'Transfer to Cartridge', instruction: 'Using the sterile pipette, transfer 2ml of the liquefied sample into the cartridge.', btn: 'Pipette Sample' },
+            { id: 'load', type: 'action', name: 'Load Machine', instruction: 'Insert the cartridge into the GeneXpert module and close the door.', btn: 'Load Cartridge' },
+            { id: 'run', type: 'action', name: 'Run Assay', instruction: 'Start the test on the system software. Machine automates extraction and PCR.', btn: 'Start Test' }
+        ],
+        quiz: [
+            { q: "What is the function of the Sample Reagent (SR) in the GeneXpert procedure?", options: ["To act as a PCR primer", "To liquefy the sputum and kill the bacteria", "To stain the bacteria for detection", "To neutralize the acid in the sample"], answer: 1 },
+            { q: "What does the GeneXpert MTB/RIF assay detect?", options: ["Live mycobacteria cells", "Antibodies against TB", "M. tuberculosis DNA and rpoB mutations", "Mycolic acid in the cell wall"], answer: 2 },
+            { q: "What is the correct volume of liquefied sample to transfer into the GeneXpert cartridge?", options: ["1 ml", "2 ml", "3 ml", "4 ml"], answer: 1 }
+        ]
+    }
+};
+
+// ==========================================
+// ROUTING & RENDERING LOGIC (With History API)
+// ==========================================
+const appContent = document.getElementById('app-content');
+let currentQuizData = null;
+let currentQuizAnswers = {};
+let quizSubmitted = false;
+
+function navigate(page, pushHistory = true) {
+    SoundEngine.playClick();
+    stopAudio(); // Stop reading when switching pages
+    
+    // Update browser URL using History API safely
+    if (pushHistory) {
+        try {
+            if (!window.location.href.startsWith('blob:') && !window.location.href.startsWith('data:')) {
+                history.pushState({ page: page }, "", "?page=" + page);
+            }
+        } catch (e) {
+            console.warn("Could not update URL via History API due to environment restrictions.", e);
+        }
+    }
+    
+    // Update Nav UI
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        if(btn.dataset.target === page) {
+            btn.className = "nav-btn px-2 py-2 rounded-md text-sm font-medium transition-colors bg-teal-600 dark:bg-teal-700 text-white";
+        } else {
+            btn.className = "nav-btn px-2 py-2 rounded-md text-sm font-medium transition-colors text-slate-300 hover:bg-slate-700 hover:text-white";
+        }
+    });
+
+    if (page === 'home') renderHome();
+    else renderLabPage(LAB_DATA[page]);
+    
+    if(window.simInterval) clearInterval(window.simInterval);
+}
+
+// Handle Browser Back/Forward buttons
+window.addEventListener('popstate', (event) => {
+    const page = event.state ? event.state.page : 'home';
+    navigate(page, false); // false prevents pushing duplicate history
+});
+
+function renderHome() {
+    appContent.innerHTML = `
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 fade-in">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h1 class="text-4xl font-extrabold text-slate-900 dark:text-white sm:text-5xl lg:text-6xl mb-4 transition-colors duration-300">
+                    Master Bacterial <span class="text-teal-600 dark:text-teal-400">Staining Techniques</span>
+                </h1>
+                <p class="text-xl text-slate-500 dark:text-slate-400 mb-8 transition-colors duration-300">
+                    Strict timing, practical steps, and instant microscopic feedback. Pass your microbiology practicals with flying colors.
+                </p>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <button onclick="navigate('gram')" class="bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-lg font-semibold text-lg transition-colors flex items-center shadow-md">
+                        <i class="fa-solid fa-flask text-lg mr-2"></i> Gram Stain Lab
+                    </button>
+                    <button onclick="navigate('zn')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-semibold text-lg transition-colors flex items-center shadow-md">
+                        <i class="fa-solid fa-fire text-lg mr-2"></i> Ziehl-Neelsen Lab
+                    </button>
+                    <button onclick="navigate('xpert')" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold text-lg transition-colors flex items-center shadow-md">
+                        <i class="fa-solid fa-wave-square text-lg mr-2"></i> GeneXpert Lab
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderLabPage(data) {
+    appContent.innerHTML = `
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 fade-in">
+            <div class="mb-8">
+                <h1 class="text-3xl font-extrabold text-slate-900 dark:text-white transition-colors">${data.title}</h1>
+                <p class="text-lg text-slate-500 dark:text-slate-400 transition-colors">${data.subtitle}</p>
+            </div>
+            
+            <div class="flex border-b border-slate-200 dark:border-slate-700 mb-8 overflow-x-auto transition-colors" id="tab-container"></div>
+            
+            <div class="min-h-[500px]" id="tab-content"></div>
+        </div>
+    `;
+    switchTab(data, 'simulator');
+}
+
+function switchTab(data, tab) {
+    SoundEngine.playClick();
+    stopAudio(); // Stop audio when switching tabs
+    if(window.simInterval) clearInterval(window.simInterval); 
+
+    const tabContainer = document.getElementById('tab-container');
+    const getTabClass = (t) => t === tab 
+        ? "flex items-center whitespace-nowrap py-4 px-6 font-medium text-sm transition-colors border-b-2 border-teal-500 text-teal-600 dark:text-teal-400"
+        : "flex items-center whitespace-nowrap py-4 px-6 font-medium text-sm transition-colors border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600";
+    
+    const simIcon = data.id === 'xpert' ? 'fa-wave-square' : 'fa-flask';
+
+    tabContainer.innerHTML = `
+        <button onclick="switchTab(LAB_DATA['${data.id}'], 'theory')" class="${getTabClass('theory')}"><i class="fa-solid fa-book-open mr-2"></i> Theory & Prep</button>
+        <button onclick="switchTab(LAB_DATA['${data.id}'], 'simulator')" class="${getTabClass('simulator')}"><i class="fa-solid ${simIcon} mr-2"></i> Virtual Practical</button>
+        <button onclick="switchTab(LAB_DATA['${data.id}'], 'results')" class="${getTabClass('results')}"><i class="fa-solid fa-clipboard-list mr-2"></i> Results & Organisms</button>
+        <button onclick="switchTab(LAB_DATA['${data.id}'], 'quiz')" class="${getTabClass('quiz')}"><i class="fa-solid fa-check-circle mr-2"></i> Exam Prep</button>
+    `;
+
+    const content = document.getElementById('tab-content');
+    if (tab === 'theory') content.innerHTML = generateTheoryHTML(data);
+    else if (tab === 'results') content.innerHTML = generateResultsHTML(data);
+    else if (tab === 'quiz') {
+        currentQuizData = data.quiz;
+        currentQuizAnswers = {};
+        quizSubmitted = false;
+        renderQuizHTML(content);
+    }
+    else if (tab === 'simulator') {
+        initSimulator(data, content);
+    }
+}
+
+// --- HTML Generators ---
+function generateTheoryHTML(data) {
+    return `
+        <div class="grid md:grid-cols-3 gap-8 fade-in">
+            <div class="md:col-span-2 space-y-8">
+                <section>
+                    <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 mb-3 pb-2 transition-colors">
+                        <h3 class="text-xl font-bold text-slate-800 dark:text-slate-200 transition-colors">Principle of the Test</h3>
+                        <button onclick="speakText(LAB_DATA['${data.id}'].theory.principle)" class="text-slate-400 hover:text-teal-500 dark:hover:text-teal-400 transition-colors" title="Read Aloud">
+                            <i class="fa-solid fa-volume-up"></i>
+                        </button>
+                    </div>
+                    <p class="text-slate-700 dark:text-slate-300 leading-relaxed transition-colors">${data.theory.principle}</p>
+                </section>
+                <section>
+                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3 border-b border-slate-200 dark:border-slate-700 pb-2 transition-colors">Reagent Preparation</h3>
+                    <div class="space-y-4">
+                        ${data.theory.reagents.map(r => `
+                            <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-200 dark:border-slate-700 border-l-4 border-l-teal-500 transition-colors">
+                                <h4 class="font-bold text-slate-800 dark:text-slate-200 mb-1 transition-colors">${r.name}</h4>
+                                <p class="text-sm text-slate-600 dark:text-slate-400 transition-colors">${r.prep}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </section>
+            </div>
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 h-fit sticky top-24 transition-colors">
+                <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center transition-colors">
+                    <i class="fa-solid ${data.id === 'xpert' ? 'fa-wave-square text-blue-500' : 'fa-microscope text-indigo-500'} mr-2"></i> Materials Needed
+                </h3>
+                <ul class="space-y-3">
+                    ${data.theory.materials.map(m => `
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check-circle text-green-500 mr-2 mt-1 shrink-0"></i>
+                            <span class="text-sm text-slate-700 dark:text-slate-300 transition-colors">${m}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        </div>
+    `;
+}
+
+function generateResultsHTML(data) {
+    return `
+        <div class="space-y-6 fade-in">
+            <div class="mb-6">
+                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-200 transition-colors">Results & Target Organisms</h3>
+                <p class="text-slate-600 dark:text-slate-400 transition-colors">Interpretation of the test results and examples of microorganisms.</p>
+            </div>
+            <div class="grid md:grid-cols-2 gap-6">
+                ${data.results.map(res => `
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col h-full transition-colors">
+                        <div class="mb-4 pb-4 border-b border-slate-100 dark:border-slate-700 transition-colors">
+                            <h4 class="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2 transition-colors">${res.category}</h4>
+                            <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">${res.appearance}</span>
+                        </div>
+                        <p class="text-slate-700 dark:text-slate-300 text-sm mb-6 flex-grow transition-colors">${res.interpretation}</p>
+                        <div>
+                            <h5 class="text-sm font-bold text-slate-800 dark:text-slate-200 mb-2 uppercase tracking-wider transition-colors">Example Organisms:</h5>
+                            <ul class="space-y-1">
+                                ${res.organisms.map(org => `
+                                    <li class="text-sm text-slate-600 dark:text-slate-400 flex items-center transition-colors">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-teal-500 mr-2 inline-block"></span>
+                                        <span class="italic">${org}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+// ==========================================
+// QUIZ LOGIC
+// ==========================================
+function renderQuizHTML(container) {
+    let html = `
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 max-w-3xl mx-auto fade-in transition-colors">
+            <div class="mb-8 text-center">
+                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-200 transition-colors">Test Your Knowledge</h3>
+                <p class="text-slate-600 dark:text-slate-400 transition-colors">Ensure you understand the principles before your practical exam.</p>
+            </div>
+            <div class="space-y-8" id="quiz-questions">
+    `;
+
+    currentQuizData.forEach((q, qIndex) => {
+        html += `<div class="bg-slate-50 dark:bg-slate-700/50 p-5 rounded-lg border border-slate-100 dark:border-slate-600 transition-colors">
+                    <h4 class="font-semibold text-slate-800 dark:text-slate-200 mb-4 transition-colors">${qIndex + 1}. ${q.q}</h4>
+                    <div class="space-y-2">`;
+        q.options.forEach((opt, oIndex) => {
+            const isSelected = currentQuizAnswers[qIndex] === oIndex;
+            const isCorrect = q.answer === oIndex;
+            let btnClass = "w-full text-left px-4 py-3 rounded-md border transition-colors ";
+            
+            if (quizSubmitted) {
+                if (isCorrect) btnClass += "bg-green-100 dark:bg-green-900/30 border-green-500 text-green-900 dark:text-green-400 font-medium";
+                else if (isSelected) btnClass += "bg-red-100 dark:bg-red-900/30 border-red-500 text-red-900 dark:text-red-400";
+                else btnClass += "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-400 opacity-50";
+            } else {
+                if (isSelected) btnClass += "bg-teal-50 dark:bg-teal-900/30 border-teal-500 text-teal-900 dark:text-teal-400 ring-1 ring-teal-500";
+                else btnClass += "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer";
+            }
+
+            html += `<button onclick="selectQuizAnswer(${qIndex}, ${oIndex})" class="${btnClass}" ${quizSubmitted ? 'disabled' : ''}>${opt}</button>`;
+        });
+        html += `</div></div>`;
+    });
+
+    html += `</div><div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between transition-colors" id="quiz-footer">`;
+    
+    if (!quizSubmitted) {
+        const canSubmit = Object.keys(currentQuizAnswers).length === currentQuizData.length;
+        html += `<button onclick="submitQuiz()" class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold py-3 px-8 rounded-lg transition-colors ml-auto" ${!canSubmit ? 'disabled' : ''}>Submit Answers</button>`;
+    } else {
+        let score = 0;
+        currentQuizData.forEach((q, i) => { if (currentQuizAnswers[i] === q.answer) score++; });
+        const scoreClass = score === currentQuizData.length ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400';
+        if (score === currentQuizData.length) SoundEngine.playSuccess(); else SoundEngine.playFail();
+
+        html += `
+            <div class="text-lg font-bold text-slate-800 dark:text-slate-200">Score: <span class="${scoreClass}">${score} / ${currentQuizData.length}</span></div>
+            <button onclick="resetQuiz()" class="bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold py-2 px-6 rounded-lg transition-colors">Retake Quiz</button>
+        `;
+    }
+
+    html += `</div></div>`;
+    container.innerHTML = html;
+}
+
+function selectQuizAnswer(qIndex, oIndex) {
+    if (quizSubmitted) return;
+    SoundEngine.playClick();
+    currentQuizAnswers[qIndex] = oIndex;
+    renderQuizHTML(document.getElementById('tab-content'));
+}
+
+function submitQuiz() {
+    SoundEngine.playClick();
+    quizSubmitted = true;
+    renderQuizHTML(document.getElementById('tab-content'));
+}
+
+function resetQuiz() {
+    SoundEngine.playClick();
+    currentQuizAnswers = {};
+    quizSubmitted = false;
+    renderQuizHTML(document.getElementById('tab-content'));
+}
+
+// ==========================================
+// 2D ANIMATION SIMULATOR ENGINE (HTML/CSS)
+// ==========================================
+
+let simState = {
+    data: null, stepIndex: 0, status: 'intro', failReason: '', slidePos: 'bench',
+    smearOpacity: 0, smearColor: 'transparent', isSmearing: false, isHeating: false,
+    isPouringStain: false, isPouringWater: false, stainApplied: false, timer: 0, isTiming: false,
+    cupLiquid: 'thick', pipettePos: 'hidden', cartridgePos: 'bench', machineStatus: 'idle'
+};
+
+function initSimulator(data, container) {
+    simState = {
+        data: data, stepIndex: 0, status: 'intro', failReason: '', slidePos: 'bench',
+        smearOpacity: 0, smearColor: 'transparent', isSmearing: false, isHeating: false,
+        isPouringStain: false, isPouringWater: false, stainApplied: false, timer: 0, isTiming: false,
+        cupLiquid: 'thick', pipettePos: 'hidden', cartridgePos: 'bench', machineStatus: 'idle'
+    };
+    if(window.simInterval) clearInterval(window.simInterval);
+    container.innerHTML = `<div id="sim-root" class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 fade-in transition-colors"></div>`;
+    renderSimulatorDOM();
+}
+
+function resetSimulator() {
+    SoundEngine.playClick();
+    stopAudio();
+    initSimulator(simState.data, document.getElementById('tab-content'));
+}
+
+function renderSimulatorDOM() {
+    const root = document.getElementById('sim-root');
+    if(!root) return;
+
+    const step = simState.data.processSteps[simState.stepIndex];
+    let html = `
+        <div class="mb-6 flex items-center justify-between">
+            <div>
+                <h3 class="text-2xl font-bold text-slate-800 dark:text-slate-200 transition-colors">${simState.data.id === 'xpert' ? 'GeneXpert Virtual Lab' : 'Virtual Laboratory'}</h3>
+                <p class="text-slate-600 dark:text-slate-400 transition-colors">Simulate the procedure. Watch your timing!</p>
+            </div>
+            ${simState.status !== 'intro' ? `<button onclick="resetSimulator()" class="text-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 py-2 px-4 rounded font-medium flex items-center transition-colors"><i class="fa-solid fa-rotate-left mr-2"></i> Restart</button>` : ''}
+        </div>
+    `;
+
+    if (simState.status === 'intro') {
+        const icon = simState.data.id === 'xpert' ? 'fa-wave-square text-blue-500' : 'fa-flask text-teal-500';
+        const color = simState.data.id === 'xpert' ? 'blue' : 'teal';
+        html += `
+            <div class="bg-slate-50 dark:bg-slate-700/50 p-8 rounded-lg border border-slate-200 dark:border-slate-700 text-center transition-colors">
+                <i class="fa-solid ${icon} text-6xl mb-4"></i>
+                <h4 class="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2 transition-colors">Ready to start?</h4>
+                <p class="text-slate-600 dark:text-slate-400 mb-6 max-w-md mx-auto transition-colors">Follow the instructions carefully. Staining requires precise timing. If you make a mistake, the test will fail.</p>
+                <button onclick="startSimulatorRun()" class="bg-${color}-600 hover:bg-${color}-700 text-white font-bold py-3 px-8 rounded-lg transition-colors flex items-center mx-auto shadow-sm">
+                    <i class="fa-solid fa-play mr-2"></i> Start Simulation
+                </button>
+            </div>
+        `;
+    } else {
+        html += `<div class="flex flex-col lg:flex-row gap-6">`;
+        
+        // VISUAL BENCH AREA
+        html += `<div class="flex-1 min-h-[400px] bg-slate-800 rounded-xl relative overflow-hidden border-4 border-slate-700 shadow-inner">`;
+        
+        if (simState.data.id === 'xpert') {
+            html += getXpertBenchHTML();
+        } else {
+            if (step && step.id === 'microscope') html += getMicroscopeHTML(simState.data.id);
+            else html += getStainBenchHTML(step);
+        }
+        
+        html += `</div>`;
+
+        // CONTROLS AREA
+        const mainColor = simState.data.id === 'xpert' ? 'blue' : 'teal';
+        html += `
+            <div class="w-full lg:w-80 bg-slate-50 dark:bg-slate-700/50 p-6 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col transition-colors">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="bg-${mainColor}-100 dark:bg-${mainColor}-900 text-${mainColor}-800 dark:text-${mainColor}-300 text-xs font-bold px-2 py-1 rounded transition-colors">Step ${simState.stepIndex + 1} of ${simState.data.processSteps.length}</span>
+                </div>
+                <h4 class="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2 transition-colors">${step ? step.name : ''}</h4>
+                
+                <div class="bg-white dark:bg-slate-800 p-4 rounded border border-slate-200 dark:border-slate-600 shadow-sm mb-6 flex-1 text-sm text-slate-700 dark:text-slate-300 transition-colors relative">
+        `;
+
+        if (simState.status === 'failed') {
+            html += `<div class="text-red-700 dark:text-red-400 flex flex-col items-center justify-center text-center h-full"><i class="fa-solid fa-triangle-exclamation text-4xl mb-2 text-red-500"></i><span class="font-bold block mb-2">Test Failed</span>${simState.failReason}</div>`;
+        } else if (simState.status === 'success') {
+            html += `<div class="text-green-700 dark:text-green-400 flex flex-col items-center justify-center text-center h-full"><i class="fa-solid fa-check-circle text-4xl mb-2 text-green-500"></i><span class="font-bold block mb-2">Procedure Complete!</span>Successfully processed the assay.</div>`;
+        } else {
+            html += `
+                <button onclick="speakCurrentInstruction()" class="absolute top-2 right-2 text-slate-400 hover:text-teal-500 dark:hover:text-teal-400 transition-colors" title="Read Aloud">
+                    <i class="fa-solid fa-volume-up"></i>
+                </button>
+                <p class="pr-6 leading-relaxed">${step.instruction}</p>
+            `;
+        }
+        html += `</div>`; 
+
+        // Action Buttons
+        if (simState.status === 'running' && step) {
+            html += `<div class="space-y-4">`;
+            
+            // Timer logic for stain steps
+            if (step.type === 'stain') {
+                const maxT = Math.max(step.maxTime + 2, 10);
+                const safeLeft = (step.minTime / maxT) * 100;
+                const safeWidth = ((step.maxTime - step.minTime) / maxT) * 100;
+                const failLeft = (step.maxTime / maxT) * 100;
+                const pointerLeft = Math.min((simState.timer / maxT) * 100, 100);
+
+                html += `
+                    <div class="mb-4">
+                        <div class="flex justify-between text-xs font-bold text-slate-500 dark:text-slate-400 mb-1 transition-colors">
+                            <span>Timer</span><span class="text-slate-800 dark:text-slate-200">${simState.timer.toFixed(1)}s</span>
+                        </div>
+                        <div class="h-4 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden relative shadow-inner transition-colors">
+                            <div class="absolute left-0 h-full bg-yellow-400" style="width: ${safeLeft}%"></div>
+                            <div class="absolute h-full bg-green-500" style="left: ${safeLeft}%; width: ${safeWidth}%"></div>
+                            <div class="absolute right-0 h-full bg-red-500" style="left: ${failLeft}%; right: 0"></div>
+                            <div class="absolute top-0 bottom-0 w-1.5 bg-black dark:bg-white z-10 shadow transition-all duration-100" style="left: ${pointerLeft}%"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-slate-500 dark:text-slate-400 mt-1 uppercase transition-colors">
+                            <span>Too Early</span><span class="text-green-600 dark:text-green-400 font-bold">Wash Zone</span><span class="text-red-600 dark:text-red-400">Failed</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (step.type === 'action' || step.type === 'view') {
+                const disabled = (simState.isSmearing || simState.isHeating) ? 'disabled class="w-full bg-slate-300 dark:bg-slate-600 text-white font-bold py-3 px-4 rounded-lg shadow-sm cursor-not-allowed"' : `class="w-full bg-${mainColor}-600 hover:bg-${mainColor}-700 text-white font-bold py-3 px-4 rounded-lg transition-colors shadow-sm"`;
+                const fn = step.type === 'action' ? 'executeSimAction()' : 'nextSimStep()';
+                html += `<button onclick="${fn}" ${disabled}>${step.btn}</button>`;
+            } else if (step.type === 'stain') {
+                const btnApplyDisabled = (simState.stainApplied || simState.isPouringStain) ? 'disabled class="bg-slate-300 dark:bg-slate-600 text-white font-bold py-3 px-2 rounded-lg text-sm cursor-not-allowed"' : 'class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-2 rounded-lg transition-colors text-sm"';
+                const btnWashDisabled = (!simState.stainApplied || simState.isPouringWater) ? 'disabled class="bg-slate-200 dark:bg-slate-600 text-slate-400 dark:text-slate-400 font-bold py-3 px-2 rounded-lg text-sm cursor-not-allowed"' : 'class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-2 rounded-lg transition-colors text-sm"';
+                html += `
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="applySimStain()" ${btnApplyDisabled}>Apply Stain</button>
+                        <button onclick="washSimSlide()" ${btnWashDisabled}>Wash Slide</button>
+                    </div>
+                `;
+            }
+            html += `</div>`;
+        }
+        html += `</div></div>`;
+    }
+    root.innerHTML = html;
+}
+
+function startSimulatorRun() {
+    SoundEngine.playClick();
+    simState.status = 'running';
+    renderSimulatorDOM();
+    speakCurrentInstruction();
+}
+
+// XPERT HTML
+function getXpertBenchHTML() {
+    let html = `
+        <div class="absolute inset-0 bg-slate-100 flex items-center justify-center pointer-events-none">
+            <div class="absolute bottom-0 w-full h-1/3 bg-slate-300 border-t-2 border-slate-400"></div>
+            
+            <!-- Machine -->
+            <div class="absolute right-[10%] bottom-[20%] w-40 h-56 bg-white border-2 border-slate-300 shadow-xl rounded-lg flex flex-col z-10">
+                <div class="w-full h-8 bg-blue-800 rounded-t-lg flex items-center justify-center">
+                    <span class="text-white text-xs font-bold">GeneXpert</span>
+                </div>
+                <div class="flex-1 p-2 flex flex-col gap-2">
+                    <div class="w-full flex-1 border-2 border-slate-200 rounded bg-slate-50 relative overflow-hidden">
+                        <div class="absolute inset-x-0 bottom-0 transition-all duration-700 ${simState.cartridgePos === 'machine' ? 'h-1/2 bg-slate-400 opacity-50' : 'h-0'}"></div>
+                    </div>
+                    <div class="w-full h-12 rounded border-2 p-1 text-[8px] flex items-center justify-center text-center font-mono ${simState.machineStatus === 'idle' ? 'bg-slate-800 text-slate-400 border-slate-700' : simState.machineStatus === 'running' ? 'bg-blue-100 text-blue-800 border-blue-400 animate-pulse' : 'bg-green-100 text-green-800 border-green-500'}">
+                        ${simState.machineStatus === 'idle' ? "SYSTEM READY" : simState.machineStatus === 'running' ? "ANALYZING..." : "MTB DETECTED<br>RIF RESISTANCE NOT DETECTED"}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sputum Cup -->
+            <div class="absolute bottom-[25%] transition-all duration-700 z-20 ${simState.pipettePos === 'cup' ? 'left-[45%]' : 'left-[15%]'}">
+                <div class="w-16 h-20 bg-white border-2 border-slate-400 rounded-b-xl relative overflow-hidden shadow-md" style="background-color: rgba(255,255,255,0.6)">
+                    <div class="absolute top-0 w-full h-4 bg-orange-400 rounded-t-sm -mt-4 border-b-2 border-slate-400"></div>
+                    <div class="absolute bottom-0 w-full transition-all duration-1000 ${simState.cupLiquid === 'thick' ? 'h-1/3 bg-yellow-100' : 'h-1/2 bg-yellow-200'}" style="opacity:0.8"></div>
+                </div>
+            </div>
+
+            <!-- Cartridge -->
+            ${simState.cartridgePos === 'bench' ? `
+                <div class="absolute left-[35%] bottom-[22%] w-12 h-16 bg-blue-100 border-2 border-blue-300 rounded-sm shadow-md z-10 flex flex-col justify-end p-1">
+                    <div class="w-full h-6 bg-white border border-blue-200 text-[6px] text-center pt-1 text-slate-500 font-bold leading-tight">XPERT<br>MTB/RIF</div>
+                </div>
+            ` : ''}
+
+            <!-- Pipette -->
+            ${simState.pipettePos !== 'hidden' ? `
+                <div class="absolute bottom-[40%] transition-all duration-700 z-30 ${simState.pipettePos === 'cup' ? 'pipette-pos-cup' : 'pipette-pos-cart'}">
+                    <div class="w-2 h-16 bg-white border border-slate-400 rounded-b-full relative">
+                        <div class="absolute -top-6 -left-1 w-4 h-6 bg-blue-200 border border-slate-400 rounded-full"></div>
+                        ${simState.pipettePos === 'cartridge' ? '<div class="absolute bottom-1 w-full h-4 bg-yellow-200 rounded-b-full" style="opacity:0.6"></div>' : ''}
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    return html;
+}
+
+// STAIN BENCH HTML
+function getStainBenchHTML(step) {
+    let html = `
+        <div class="absolute top-0 w-full h-1/2 bg-slate-700" style="background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 20px 20px;"></div>
+        <div class="absolute bottom-0 w-full h-1/2 bg-slate-800 border-t-2 border-slate-900 shadow-[inset_0_10px_20px_rgba(0,0,0,0.5)]"></div>
+
+        <!-- Bunsen Burner -->
+        <div class="absolute left-[45%] bottom-[15%] flex flex-col items-center pointer-events-none">
+            <div class="w-4 h-8 bg-blue-500 rounded-t-full rounded-b-md blur-[2px] origin-bottom transition-opacity duration-300 ${((step && step.heat && simState.isTiming) || simState.slidePos === 'flame') ? 'opacity-90 animate-pulse-flame' : 'opacity-0'}">
+                <div class="w-2 h-4 bg-cyan-300 mx-auto rounded-t-full rounded-b-md mt-4"></div>
+            </div>
+            <div class="w-3 h-12 bg-slate-400 border-x border-slate-500 z-10"></div>
+            <div class="w-10 h-3 bg-slate-600 rounded border-b-2 border-slate-700 z-10 shadow-lg"></div>
+        </div>
+
+        <!-- Sink & Rack -->
+        <div class="absolute right-[5%] bottom-[10%] w-56 h-32 bg-slate-300 border-4 border-slate-400 rounded flex flex-col shadow-xl">
+            <div class="w-full flex-1 bg-slate-200 shadow-[inset_0_5px_15px_rgba(0,0,0,0.2)] overflow-hidden relative border-t border-white">
+                <div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-slate-700 shadow-inner"></div>
+            </div>
+            <div class="absolute top-[40%] left-0 w-full h-2 bg-slate-400 shadow-md border-y border-slate-500 z-20"></div>
+            <div class="absolute top-[60%] left-0 w-full h-2 bg-slate-400 shadow-md border-y border-slate-500 z-20"></div>
+        </div>
+
+        <!-- The Slide -->
+        <div class="absolute w-32 h-10 border border-white/60 shadow-md rounded-sm flex items-center justify-center transition-all duration-700 ease-in-out z-30 ${simState.isHeating ? 'animate-shake' : ''} slide-pos-${simState.slidePos}" style="background-color: rgba(239, 246, 255, 0.4)">
+            <div class="w-10 h-8 rounded-[40%] blur-[1px] transition-colors duration-1000 ease-in" style="opacity: ${simState.smearOpacity}; background-color: ${simState.smearColor}"></div>
+        </div>
+    `;
+
+    // Animations
+    if (simState.isSmearing) {
+        html += `
+            <div class="absolute w-64 h-2 left-[5%] bottom-[20%] animate-spin-smear origin-right z-40 pointer-events-none">
+                <div class="absolute right-0 w-4 h-4 border-2 border-slate-400 rounded-full"></div>
+                <div class="absolute right-4 w-48 h-0.5 bg-slate-400"></div>
+                <div class="absolute left-10 w-24 h-2 bg-blue-900 rounded"></div>
+            </div>
+        `;
+    }
+
+    if (simState.isPouringStain && step) {
+        html += `
+            <div class="absolute right-[22%] bottom-[60%] z-40 flex flex-col items-center pointer-events-none animate-bounce-drop">
+                <div class="w-8 h-16 bg-white border-2 border-slate-300 rounded-lg shadow-lg overflow-hidden relative">
+                    <div class="absolute bottom-0 w-full h-1/2" style="background-color: ${step.color}"></div>
+                </div>
+                <div class="w-2 h-4 bg-slate-200 border-x border-slate-400"></div>
+                <div class="w-1.5 h-6 mt-1 animate-pulse rounded-full" style="background-color: ${step.color}"></div>
+            </div>
+        `;
+    }
+
+    if (simState.isPouringWater) {
+        html += `
+            <div class="absolute right-[15%] bottom-[55%] z-40 flex flex-col items-center pointer-events-none origin-bottom-right rotate-[315deg] animate-shake">
+                <div class="w-12 h-20 bg-white border-2 border-slate-300 rounded-xl shadow-lg relative overflow-hidden">
+                    <div class="absolute bottom-0 w-full h-3/4" style="background-color: rgba(219, 234, 254, 0.5)"></div>
+                </div>
+                <div class="w-2 h-6 bg-slate-300"></div>
+                <div class="absolute top-full left-1/2 -translate-x-1/2 w-1.5 h-24 rounded animate-pulse" style="background-color: rgba(191, 219, 254, 0.8)"></div>
+            </div>
+        `;
+    }
+
+    return html;
+}
+
+function getMicroscopeHTML(type) {
+    const isGram = type === 'gram';
+    const cPos = isGram ? '#4c1d95' : '#e11d48';
+    const cNeg = isGram ? '#db2777' : '#2563eb';
+    
+    let svgBody = isGram ? `
+        <g fill="${cPos}">
+            <circle cx="40" cy="40" r="5" /><circle cx="48" cy="38" r="5" /><circle cx="44" cy="46" r="5" /><circle cx="36" cy="48" r="5" /><circle cx="52" cy="45" r="5" />
+            <circle cx="120" cy="80" r="5" /><circle cx="128" cy="78" r="5" /><circle cx="124" cy="86" r="5" />
+            <circle cx="60" cy="130" r="5" /><circle cx="68" cy="128" r="5" /><circle cx="64" cy="136" r="5" /><circle cx="56" cy="138" r="5" />
+        </g>
+        <g fill="${cNeg}">
+            <rect x="80" y="30" width="8" height="20" rx="4" transform="rotate(45 84 40)" />
+            <rect x="140" y="120" width="8" height="20" rx="4" transform="rotate(-30 144 130)" />
+            <rect x="90" y="90" width="8" height="20" rx="4" transform="rotate(15 94 100)" />
+            <rect x="30" y="90" width="8" height="20" rx="4" transform="rotate(75 34 100)" />
+        </g>
+    ` : `
+        <g fill="${cPos}">
+            <rect x="50" y="50" width="4" height="25" rx="2" transform="rotate(10 52 62.5)" />
+            <rect x="54" y="48" width="4" height="25" rx="2" transform="rotate(15 56 60.5)" />
+            <rect x="52" y="70" width="4" height="25" rx="2" transform="rotate(5 54 82.5)" />
+            <rect x="130" y="40" width="4" height="25" rx="2" transform="rotate(-40 132 52.5)" />
+            <rect x="80" y="120" width="4" height="25" rx="2" transform="rotate(70 82 132.5)" />
+            <rect x="85" y="118" width="4" height="25" rx="2" transform="rotate(75 87 130.5)" />
+        </g>
+        <g fill="${cNeg}">
+            <circle cx="30" cy="120" r="6" /><circle cx="38" cy="115" r="6" />
+            <circle cx="140" cy="90" r="6" /><circle cx="148" cy="95" r="6" /><circle cx="145" cy="105" r="6" />
+            <rect x="90" y="30" width="10" height="20" rx="5" transform="rotate(20 95 40)" />
+            <rect x="100" y="70" width="10" height="20" rx="5" transform="rotate(-15 105 80)" />
+        </g>
+    `;
+
+    return `
+        <div class="absolute inset-0 bg-slate-100 z-50 flex flex-col items-center justify-center p-4 fade-in">
+            <h4 class="text-lg font-bold text-slate-700 mb-4">Microscopic View (1000x)</h4>
+            <div class="relative w-64 h-64 mx-auto rounded-full border-4 border-slate-300 bg-slate-50 shadow-[inset_0_0_20px_rgba(0,0,0,0.2)] overflow-hidden flex items-center justify-center">
+                <div class="absolute inset-0 bg-slate-200 opacity-20" style="background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 10px 10px"></div>
+                <svg viewBox="0 0 180 180" class="w-full h-full p-4">${svgBody}</svg>
+                <div class="absolute inset-0 rounded-full pointer-events-none" style="background: linear-gradient(to top right, transparent, rgba(255,255,255,0.1), rgba(255,255,255,0.4))"></div>
+            </div>
+        </div>
+    `;
+}
+
+// Action Handlers
+function executeSimAction() {
+    SoundEngine.playClick();
+    const step = simState.data.processSteps[simState.stepIndex];
+    const isXpert = simState.data.id === 'xpert';
+
+    if (isXpert) {
+        if (step.id === 'reagent') {
+            SoundEngine.playWash(); // pour sound
+            setTimeout(() => nextSimStep(), 1500);
+        } else if (step.id === 'incubate') {
+            setTimeout(() => { simState.cupLiquid = 'liquid'; renderSimulatorDOM(); nextSimStep(); }, 2000);
+        } else if (step.id === 'transfer') {
+            simState.pipettePos = 'cup'; renderSimulatorDOM();
+            setTimeout(() => { simState.pipettePos = 'cartridge'; renderSimulatorDOM(); }, 1000);
+            setTimeout(() => { simState.pipettePos = 'hidden'; nextSimStep(); }, 2500);
+        } else if (step.id === 'load') {
+            simState.cartridgePos = 'machine'; renderSimulatorDOM();
+            setTimeout(() => nextSimStep(), 1000);
+        } else if (step.id === 'run') {
+            simState.machineStatus = 'running'; renderSimulatorDOM();
+            SoundEngine.playMachineHum();
+            setTimeout(() => { simState.machineStatus = 'complete'; renderSimulatorDOM(); SoundEngine.playBeep(); nextSimStep(); }, 3000);
+        }
+    } else {
+        if (step.id === 'smear') {
+            simState.isSmearing = true;
+            SoundEngine.playSmear();
+            renderSimulatorDOM();
+            setTimeout(() => {
+                simState.isSmearing = false; simState.smearOpacity = 0.5; simState.smearColor = 'rgba(255, 255, 255, 0.6)';
+                nextSimStep();
+            }, 1500);
+        } else if (step.id === 'heatfix') {
+            simState.slidePos = 'flame'; renderSimulatorDOM();
+            setTimeout(() => { simState.isHeating = true; SoundEngine.playFire(); renderSimulatorDOM(); }, 500);
+            setTimeout(() => { simState.isHeating = false; nextSimStep(); }, 3500);
+        } else if (step.id === 'rack') {
+            simState.slidePos = 'rack'; renderSimulatorDOM();
+            setTimeout(() => nextSimStep(), 1000);
+        }
+    }
+}
+
+function applySimStain() {
+    SoundEngine.playClick();
+    const step = simState.data.processSteps[simState.stepIndex];
+    simState.isPouringStain = true;
+    SoundEngine.playDrop();
+    renderSimulatorDOM();
+    
+    setTimeout(() => {
+        simState.isPouringStain = false;
+        simState.stainApplied = true;
+        simState.smearColor = step.color;
+        simState.timer = 0;
+        simState.isTiming = true;
+        
+        if (step.heat) SoundEngine.playFire(); // ZN Carbol heat
+
+        window.simInterval = setInterval(() => {
+            simState.timer += 0.1;
+            renderSimulatorDOM();
+            if (simState.timer > step.maxTime) {
+                clearInterval(window.simInterval);
+                simState.isTiming = false;
+                simState.status = 'failed';
+                simState.failReason = `Time limit exceeded! You left ${step.name} on for too long (${simState.timer.toFixed(1)}s). The test has failed.`;
+                SoundEngine.playFail();
+                stopAudio();
+                renderSimulatorDOM();
+            }
+        }, 100);
+    }, 1000);
+}
+
+function washSimSlide() {
+    const step = simState.data.processSteps[simState.stepIndex];
+    clearInterval(window.simInterval);
+    simState.isTiming = false;
+
+    if (simState.timer < step.minTime) {
+        simState.status = 'failed';
+        simState.failReason = `You washed too early! ${step.name} needs at least ${step.minTime} seconds to work. (You washed at ${simState.timer.toFixed(1)}s).`;
+        SoundEngine.playFail();
+        stopAudio();
+        renderSimulatorDOM();
+        return;
+    }
+
+    simState.isPouringWater = true;
+    SoundEngine.playWash();
+    renderSimulatorDOM();
+
+    setTimeout(() => {
+        simState.isPouringWater = false;
+        simState.stainApplied = false;
+        if (step.postColor) simState.smearColor = step.postColor;
+        nextSimStep();
+    }, 1500);
+}
+
+function nextSimStep() {
+    SoundEngine.playClick();
+    stopAudio();
+    if (simState.stepIndex < simState.data.processSteps.length - 1) {
+        simState.stepIndex++;
+        renderSimulatorDOM();
+        speakCurrentInstruction();
+    } else {
+        simState.status = 'success';
+        SoundEngine.playSuccess();
+        renderSimulatorDOM();
+    }
+}
+
+// Initial Load Strategy with query params for History API
+const urlParams = new URLSearchParams(window.location.search);
+const initialPage = urlParams.get('page') || 'home';
+navigate(initialPage, false);
+
+</script>
+</body>
+</html>
